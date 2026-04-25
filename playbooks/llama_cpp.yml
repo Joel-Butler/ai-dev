@@ -1,0 +1,10 @@
+---
+- name: Set up llama.cpp
+  hosts: localhost
+  tasks:
+    - name: Clone or update llama.cpp
+      ansible.builtin.git:
+        repo: https://github.com/ggml-org/llama.cpp
+        dest: "{{ ansible_facts['env']['HOME'] }}/dev/llama.cpp"
+        update: true
+        version: master
