@@ -1,0 +1,9 @@
+[project]
+name = "ai-dev"
+version = "0.1.0"
+description = "Ubuntu WSL configuration for local AI model deployment with llama.cpp"
+requires-python = ">=3.12"
+dependencies = [
+    "ansible>=13.6.0",
+    "ansible-lint>=26.4.0",
+]
