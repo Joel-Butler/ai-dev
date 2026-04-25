@@ -1,10 +1,59 @@
 ---
-- name: Set up llama.cpp
+- name: Install system dependencies
   hosts: localhost
+  become: true
+  vars:
+    cuda_version: "12-6"
+  tasks:
+    - name: Install build dependencies
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - cmake
+          - libssl-dev
+          - ninja-build
+          - ccache
+          - libgomp1
+        state: present
+        update_cache: true
+
+    - name: Download CUDA keyring
+      ansible.builtin.get_url:
+        url: https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-keyring_1.1-1_all.deb
+        dest: /tmp/cuda-keyring.deb
+        mode: "0644"
+
+    - name: Install CUDA keyring
+      ansible.builtin.apt:
+        deb: /tmp/cuda-keyring.deb
+        state: present
+
+    - name: Install CUDA toolkit
+      ansible.builtin.apt:
+        name: "cuda-toolkit-{{ cuda_version }}"
+        state: present
+        update_cache: true
+
+- name: Set up llama.cpp source
+  hosts: localhost
+  vars:
+    llama_cpp_dest: "{{ ansible_facts['env']['HOME'] }}/dev/llama.cpp"
   tasks:
     - name: Clone or update llama.cpp
       ansible.builtin.git:
         repo: https://github.com/ggml-org/llama.cpp
-        dest: "{{ ansible_facts['env']['HOME'] }}/dev/llama.cpp"
+        dest: "{{ llama_cpp_dest }}"
         update: true
         version: master
+
+    - name: Configure llama.cpp with CMake (CUDA)
+      ansible.builtin.command:
+        cmd: cmake -B build -G Ninja -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release
+        chdir: "{{ llama_cpp_dest }}"
+      changed_when: false
+
+    - name: Build llama.cpp
+      ansible.builtin.command:
+        cmd: cmake --build build --config Release -j {{ ansible_processor_vcpus }}
+        chdir: "{{ llama_cpp_dest }}"
+      changed_when: true
